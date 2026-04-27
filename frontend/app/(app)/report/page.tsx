@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, MapPin, AlertTriangle, Send, Users, Building2, Check } from "lucide-react";
-import LocationPicker from "@/components/map/LocationPicker";
+import DynamicMapPicker from "@/components/map/DynamicMapPicker";
 import { createReport, getGovtUsers, getNgoUsers } from "@/lib/api";
 import type { CreateReportPayload } from "@/lib/api";
 
@@ -31,14 +31,32 @@ interface FormData {
 export default function ReportIssuePage() {
   const [step, setStep] = useState(1);
   const router = useRouter();
-  const [category, setCategory] = useState<"infrastructure" | "health" | "safety" | "other">("infrastructure");
-  const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [title, setTitle] = useState("");
   const [urgency, setUrgency] = useState<"low" | "medium" | "high">("medium");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    category: "",
+    description: "",
+    location: null,
+    images: [],
+    uploadedImageUrl: null,
+  });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const updateFormData = (data: Partial<FormData>) => {
+    setFormData((prev) => ({ ...prev, ...data }));
+  };
+
+  const handleLocationChange = (location: LocationData) => {
+    updateFormData({ location });
+  };
+
+  const canProceedToStep2 = formData.category && formData.description.length >= 10;
+  const canProceedToStep3 = formData.location !== null;
   
   const [govtUsers, setGovtUsers] = useState<Recipient[]>([]);
   const [ngoUsers, setNgoUsers] = useState<Recipient[]>([]);
@@ -122,26 +140,7 @@ export default function ReportIssuePage() {
       setIsSubmitting(false);
     }
   }
-  const [formData, setFormData] = useState<FormData>({
-    category: "",
-    description: "",
-    location: null,
-    images: [],
-    uploadedImageUrl: null,
-  });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const updateFormData = (data: Partial<FormData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
-  };
-
-  const handleLocationChange = (location: LocationData) => {
-    updateFormData({ location });
-  };
-
-  const canProceedToStep2 = formData.category && formData.description.length >= 10;
-  const canProceedToStep3 = formData.location !== null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-12 md:pb-0">
@@ -234,7 +233,24 @@ export default function ReportIssuePage() {
                   <MapPin className="w-4 h-4 text-swiss-red" />
                   Location Coordinates
                 </label>
-                <LocationPicker onLocationChange={handleLocationChange} />
+                <div className="h-80 bg-swiss-muted border-4 border-swiss-fg swiss-grid-pattern flex items-center justify-center relative overflow-hidden group">
+                  <DynamicMapPicker 
+                    onLocationSelect={(lat, lng) => updateFormData({ location: { lat, lng } })}
+                    initialLocation={formData.location || undefined}
+                  />
+                  {!formData.location && (
+                    <div className="absolute z-10 pointer-events-none flex flex-col items-center gap-4 bg-swiss-bg/80 p-4 border-4 border-swiss-fg">
+                      <p className="text-[10px] font-bold text-swiss-fg uppercase">CLICK ON MAP TO SET PIN</p>
+                    </div>
+                  )}
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="ENTER ADDRESS..."
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  className="w-full p-4 md:p-6 border-4 border-swiss-fg bg-swiss-muted focus:outline-none focus:bg-white focus:border-swiss-red font-bold text-sm tracking-tight transition-all"
+                />
                 <div className="space-y-4">
                   <label className="text-[10px] font-black tracking-widest uppercase">Urgency Level</label>
                   <div className="grid grid-cols-3 gap-4">
@@ -354,17 +370,6 @@ export default function ReportIssuePage() {
                 )}
               </div>
 
-              <div className="p-6 md:p-8 border-4 border-swiss-red bg-swiss-red/5">
-                <p className="text-[10px] font-black tracking-widest uppercase text-swiss-red mb-2">NOTICE</p>
-                <p className="text-[10px] md:text-xs font-bold leading-relaxed text-swiss-fg/80">
-                  BY SUBMITTING THIS REPORT, YOU CONFIRM THAT THE INFORMATION PROVIDED IS ACCURATE TO THE BEST OF YOUR KNOWLEDGE.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-8 animate-in fade-in duration-500">
               <div className="space-y-4">
                 <label className="text-[10px] font-black tracking-widest uppercase flex items-center gap-2">
                   <Upload className="w-4 h-4 text-swiss-red" />
