@@ -12,7 +12,7 @@ interface LocationData {
 }
 
 interface FormData {
-  category: string;
+  category: "infrastructure" | "health" | "safety" | "other" | "environment" | "education" | "social" | "";
   description: string;
   location: LocationData | null;
   images: File[];
@@ -46,9 +46,9 @@ export default function ReportIssuePage() {
 
     try {
       await createReport({
-        title: title.trim() || `${category.toUpperCase()} issue report`,
-        description,
-        category,
+        title: title.trim() || `${formData.category.toUpperCase()} issue report`,
+        description: formData.description,
+        category: formData.category,
         urgency,
         location: address,
         address,
@@ -128,10 +128,10 @@ export default function ReportIssuePage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
                     {categoryOptions.map((cat) => (
                       <button 
-                        key={cat}
-                        onClick={() => updateFormData({ category: cat })}
+                        key={cat.value}
+                        onClick={() => updateFormData({ category: cat.value })}
                         className={`px-4 py-6 md:px-6 md:py-8 border-4 border-swiss-fg font-black text-xs tracking-widest uppercase transition-all ${
-                          formData.category === cat 
+                          formData.category === cat.value 
                             ? "bg-swiss-red text-swiss-bg" 
                             : "hover:bg-swiss-red hover:text-swiss-bg"
                         }`}
@@ -156,8 +156,6 @@ export default function ReportIssuePage() {
                 <div className="space-y-4">
                   <label className="text-[10px] font-black tracking-widest uppercase">Description of Event</label>
                   <textarea 
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
                     value={formData.description}
                     onChange={(e) => updateFormData({ description: e.target.value })}
                     className="w-full h-32 md:h-48 p-4 md:p-6 border-4 border-swiss-fg bg-swiss-muted focus:outline-none focus:bg-white focus:border-swiss-red font-bold text-sm tracking-tight transition-all placeholder:text-swiss-fg/20"
@@ -285,11 +283,10 @@ export default function ReportIssuePage() {
                 void handleFinalSubmit();
               }}
               disabled={
-                isSubmitting ||
-                (step === 1 && description.trim().length < 10) ||
-                (step === 2 && address.trim().length < 3)
+                isSubmitting || 
+                (step === 1 && !canProceedToStep2) || 
+                (step === 2 && !canProceedToStep3)
               }
-              disabled={(step === 1 && !canProceedToStep2) || (step === 2 && !canProceedToStep3)}
               className={`flex-[2] py-4 md:py-6 font-black tracking-widest uppercase transition-colors flex items-center justify-center gap-3 text-sm ${
                 (step === 1 && !canProceedToStep2) || (step === 2 && !canProceedToStep3)
                   ? "bg-swiss-fg/20 text-swiss-fg/40 cursor-not-allowed"
